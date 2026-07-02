@@ -11,6 +11,14 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include "sm8750.dtsi"
+#include "pm8010.dtsi"
+#include "pm8550.dtsi"
+#define PMK8550VE_SID 8
+#include "pm8550ve.dtsi"
+#include "pmih0108.dtsi"
+#include "pmk8550.dtsi"
+#include "pmr735d_a.dtsi"
+#include "sm8750-pmics.dtsi"
 
 / {
 	model = "OnePlus 13";
@@ -66,11 +74,33 @@
 		};
 	};
 
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		key-volume-down {
+			label = "Volume Down";
+			linux,code = <KEY_VOLUMEDOWN>;
+			gpios = <&pm8550_gpios 6 GPIO_ACTIVE_LOW>;
+			debounce-interval = <15>;
+			linux,can-disable;
+			wakeup-source;
+		};
+	};
+
 	pmic-glink {
 		compatible = "qcom,sm8750-pmic-glink", "qcom,pmic-glink";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		/* Downstream leaves the orientation GPIO unresolved for dodge. */
+	};
+
+	vph_pwr: vph-pwr-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "vph_pwr";
+		regulator-min-microvolt = <3700000>;
+		regulator-max-microvolt = <3700000>;
+		regulator-always-on;
+		regulator-boot-on;
 	};
 };
 
