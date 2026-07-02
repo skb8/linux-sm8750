@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Downstream OnePlus 13 (dodge) findings, not included by default.
+ *
+ * OnePlusOSS branch: oneplus/sm8750_b_16.0.0_oneplus_13
+ * Commit: 0de73fc272a09a1e12e4e758a4d17ae7108df7fc
+ *
+ * Relevant downstream overlays:
+ * - dodge-23821-sun-overlay.dts
+ * - dodge-23821-sun-overlay-T0.dts
+ * - dodge-23893-sun-overlay.dts
+ * - dodge-23893-sun-overlay-T0.dts
+ * - dodge_overlay_common.dtsi
+ *
+ * Device IDs seen downstream:
+ * - project-id: 23893, 23894, 23895
+ * - hw-id: T1, EVT1, EVT2, DVT1, DVT2, PVT1
+ *
+ * Useful hardware clues to port cleanly later:
+ * - panel/framebuffer: 1440x3168, a8r8g8b8, fb at 0xfc800000 size 0x2b00000
+ * - eSIM detect: pm8550 gpio11, active low
+ * - eSIM enable: pmih010x gpio10, active low
+ * - SIM2 detect: pm8550ve_d gpio4
+ * - RF cable detect: TLMM gpio47, input, pull-up
+ * - PM8550 GPIO2 thermistor uses PM8550_ADC5_GEN3_AMUX_THM6_GPIO2_100K_PU
+ * - downstream sets pm8550 flash/torch ires to 5000 uA
+ * - downstream adds oplus shell thermal zones, kernel state monitor, NFC, TP,
+ *   charger, sensor, UFF, and multimedia overlays through Oplus-specific drivers
+ *
+ * Do not blindly include downstream nodes: most compatible strings are vendor
+ * private and need either upstream drivers or clean replacements.
+ */
