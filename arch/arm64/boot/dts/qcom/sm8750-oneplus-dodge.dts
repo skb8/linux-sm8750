@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 /*
- * Initial mainline-oriented device tree for OnePlus 13 (dodge).
+ * OnePlus 13 (dodge / PJZ110 / OP5D0DL1) device tree.
  *
- * Based on the sm8750-mainline OnePlus-13-WIP tree and cross-checked
- * against OnePlusOSS sm8750_b_16.0.0_oneplus_13 downstream overlays.
+ * Based on sm8750-mainline OnePlus-13-WIP, OnePlusOSS dodge 23821 overlays,
+ * and verified root dump from the actual device.
  */
 
 /dts-v1/;
@@ -91,7 +91,6 @@
 		compatible = "qcom,sm8750-pmic-glink", "qcom,pmic-glink";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		/* Downstream leaves the orientation GPIO unresolved for dodge. */
 	};
 
 	vph_pwr: vph-pwr-regulator {
@@ -106,7 +105,6 @@
 
 &{/memory@a0000000} {
 	device_type = "memory";
-	/* OnePlus 13 16 GiB layout from the sm8750-mainline dodge tree. */
 	reg = <0x0 0x81960000 0x0 0xa0000>,
 	      <0x0 0x81a40000 0x0 0x1c0000>,
 	      <0x0 0x81cf4000 0x0 0xc000>,
@@ -123,7 +121,96 @@
 	      <0x0 0xd5100000 0x0 0x2f00000>;
 };
 
-/* Keep the debug UART available for bringup kernels. */
 &uart7 {
 	status = "okay";
+};
+
+/*
+ * Touchscreen support taken from the actual dodge/23821 OnePlusOSS overlay,
+ * skb8/sm8750 dtbo notes, and the pmos/NixOS working DTS using the same
+ * Synaptics TCM HBP binding.
+ */
+&spi4 {
+	status = "okay";
+
+	synaptics_tcm_hbp@0 {
+		compatible = "synaptics,tcm-spi-hbp";
+		reg = <0>;
+		chip-name = "S3910";
+		firmware-name = "AA545";
+		spi-max-frequency = <19000000>;
+		qcom,rt;
+
+		interrupt-parent = <&tlmm>;
+		interrupts = <162 0x2008>;
+		synaptics,irq-gpio = <&tlmm 162 0x2008>;
+		synaptics,reset-gpio = <&tlmm 161 GPIO_ACTIVE_LOW>;
+		synaptics,avdd-gpio = <&pm8550vs_j_gpios 3 GPIO_ACTIVE_LOW>;
+		vdd-supply = <&vreg_l4b_1p8>;
+		synaptics,vdd-name = "vdd";
+
+		pinctrl-names = "ts_spi_active", "ts_spi_suspend";
+		pinctrl-0 = <&ts_int_active &ts_reset_active>;
+		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+
+		touchpanel,panel-coords = <23040 50688>;
+		touchpanel,tx-rx-num = <17 38>;
+		panel_type = <10 3 3 3>;
+		platform_support_project = <23821 23893 23894 23895>;
+		platform_support_project_dir = <23821 23821 23821 23821>;
+		platform_support_project_commandline =
+			"mdss_dsi_panel_AA569_P_3_A0019_dsc_cmd_2nd",
+			"mdss_dsi_panel_AA545_P_3_A0005_dsc_cmd",
+			"mdss_dsi_panel_BF262_P_3_A0021_dsc_cmd",
+			"mdss_dsi_panel_AA569_P_3_A0019_dsc_cmd";
+
+		synaptics,power-on-state = <1>;
+		synaptics,power-delay-ms = <200>;
+		synaptics,irq-on-state = <0>;
+		synaptics,reset-on-state = <0>;
+		synaptics,reset-active-ms = <10>;
+		synaptics,reset-delay-ms = <80>;
+		synaptics,spi-mode = <0>;
+		synaptics,spi-byte-delay-us = <0>;
+		synaptics,spi-block-delay-us = <0>;
+
+		touchpanel,panel-coords = <23040 50688>;
+		tp_data_record_support;
+		stats_upload_support;
+		fingerprint_not_report_in_suspend;
+	};
+};
+
+&tlmm {
+	ts_int_active: ts_int_active-state {
+		pins = "gpio162";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-disable;
+		input-enable;
+	};
+
+	ts_int_suspend: ts_int_suspend-state {
+		pins = "gpio162";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+		input-enable;
+	};
+
+	ts_reset_active: ts_reset_active-state {
+		pins = "gpio161";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-disable;
+		output-low;
+	};
+
+	ts_reset_suspend: ts_reset_suspend-state {
+		pins = "gpio161";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
+	};
 };
