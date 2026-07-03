@@ -4,6 +4,16 @@ Main branch for this repo work: `oneplus-13-sm8750-bringup-v2`.
 
 Цель ветки: максимально расширить совместимость Linux kernel с OnePlus 13 на Snapdragon 8 Elite / SM8750, включая уже существующие наработки postmarketOS/DTBO/OnePlusOSS. Это не попытка держаться только upstream/mainline-стиля: если железо уже описано и есть рабочий vendor или community path, он фиксируется и подключается.
 
+## GitHub Actions build
+
+Ветка содержит workflow `.github/workflows/oneplus13-kernel.yml`. Он собирает:
+
+- `arch/arm64/boot/Image.gz`
+- `arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dtb`
+- итоговый `.config`
+
+Артефакт называется `oneplus13-sm8750-kernel`.
+
 ## Легенда поддержки
 
 | Значок | Значение |
@@ -22,6 +32,25 @@ Main branch for this repo work: `oneplus-13-sm8750-bringup-v2`.
 | `skb8/sm8750`, `feat/sm8750-acpi-madt-gtdt`, `dtbo.img` @ `572295afe95ae2350d4a2b9872fed5d1d91a3195` | универсальный DTBO источник для сверки OnePlus 13 overlays, blob SHA `240c20b2649d3daafa4abb7109fd316cd28febd2` |
 | Root dump from actual device | confirmed OP5D0DL1/PJZ110, project `23821`, `dtbo_idx=5`, `dtb_idx=2`, panel/touch/audio/power-supply nodes |
 | Community working DTS | Synaptics TCM HBP touchscreen node using `&spi4`, `synaptics,tcm-spi-hbp` |
+
+## Что ещё нужно для доделки функций
+
+| Функция | Чего не хватает | Что именно нужно получить с устройства |
+| --- | --- | --- |
+| Touchscreen S3910 | Драйвер `synaptics_tcm_hbp` / `synaptics_tcm2` в этом kernel tree | Если после сборки тач не работает: полный `dmesg | grep -Ei 'synaptics|tcm|spi|touch'` и список `/sys/devices/platform/soc/ac0000.qcom,qupv3_1_geni_se/a90000.spi/spi_master/spi0/spi0.0/` |
+| Display DRM panel | Panel init sequence / DSC / timings для `AA569_P_3_A0019_dsc_cmd` | Decompile DTBO index 5 или дамп `/proc/device-tree/soc/qcom,dsi-display-primary` и `/proc/device-tree/soc/*dsi*`; плюс `dmesg | grep -Ei 'dsi|panel|mdss|drm|display'` |
+| GPU | Firmware names + Adreno compatibility / GMU bits | `dmesg | grep -Ei 'kgsl|adreno|gmu|gpu|firmware'` и список firmware из `/vendor/firmware*` где есть `a7xx`, `gen70500`, `gmu` |
+| Battery/gauge | Mainline path для `bq28z610`/Oplus ADSP gauge | `ls -la /sys/class/power_supply`, `cat /sys/class/power_supply/battery/uevent`, `dmesg | grep -Ei 'bq28|gauge|battery|oplus_chg'` |
+| Fast charging / VOOC / UFCS | Oplus charging framework или replacement driver | Логи подключения зарядки: `dmesg -w` при вставке USB-C PD/PPS/VOOC, плюс содержимое `/sys/class/power_supply/usb/uevent` |
+| Wireless charging | WLS RX/CP chip details | `dmesg | grep -Ei 'wls|wireless|rx|nu1669|charge'` и `/sys/class/power_supply/wireless/uevent` на беспроводной зарядке |
+| NFC | Точный чип/шина/IRQ/reset для `soc:nfc_chipset` / `soc:st54spi_gpio` | `find /proc/device-tree -iname '*nfc*' -o -iname '*st54*' -o -iname '*ese*'`, `ls -la /sys/bus/spi/devices /sys/bus/i2c/devices`, `dmesg | grep -Ei 'nfc|st54|ese|nxp|pn5|sn100'` |
+| IR blaster | Подтвердить SPI device и gpio/regulator | `ls -la /sys/bus/spi/devices/spi1.0`, `dmesg | grep -Ei 'ir|kookong|spi1|consumer'`, DT node для `consumerIr` если есть |
+| Audio speakers/mic | Полная LPASS/WCD939x/SoundWire карта | `cat /proc/asound/cards`, `cat /proc/asound/pcm`, `find /proc/device-tree -iname '*wcd*' -o -iname '*lpass*' -o -iname '*swr*' -o -iname '*sound*'` |
+| WLAN | PCIe path, board data, firmware names | `dmesg | grep -Ei 'ath12k|wlan|pci|mhi|firmware|board'` после включения Wi-Fi и список `/vendor/firmware*/*ath*` `/vendor/firmware*/*wlan*` |
+| Bluetooth | UART path + QCA firmware | `dmesg | grep -Ei 'bluetooth|hci|qca|btuart|tty'`, `ls -la /dev/ttyHS* /dev/ttyMSM*`, firmware names из `/vendor/firmware*` |
+| Haptics | Mainline-compatible PMIH010X haptics node | `find /proc/device-tree -iname '*haptic*' -o -iname '*vibrator*'` и `dmesg | grep -Ei 'haptic|vibrator'` |
+| Cameras | Очень большой downstream camera stack | Пока только если цель именно камера: нужны camera DT overlays, firmware list, `dmesg | grep -Ei 'camera|cam_|csiphy|cci|sensor'` |
+| Modem/mobile data | Userspace + firmware/rmtfs/IPA integration | `dmesg | grep -Ei 'mpss|modem|ipa|rmnet|qmi|rmtfs'`, наличие modem firmware, и логи ModemManager/ofono если будешь тестить |
 
 ## Подтверждено с устройства
 

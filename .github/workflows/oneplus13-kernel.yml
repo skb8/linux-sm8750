@@ -1,0 +1,63 @@
+name: OnePlus 13 kernel build
+
+on:
+  push:
+    branches:
+      - oneplus-13-sm8750-bringup-v2
+  pull_request:
+    branches:
+      - oneplus-13-sm8750-bringup-v2
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build arm64 Image and OnePlus 13 DTB
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc \
+            bison \
+            build-essential \
+            flex \
+            gcc-aarch64-linux-gnu \
+            libelf-dev \
+            libssl-dev \
+            pahole \
+            python3 \
+            rsync
+
+      - name: Configure kernel
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+          ./scripts/kconfig/merge_config.sh -m \
+            .config \
+            arch/arm64/configs/sm8750-oneplus13.config
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+
+      - name: Build Image and dodge DTB
+        run: |
+          make -j"$(nproc)" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+            Image.gz \
+            qcom/sm8750-oneplus-dodge.dtb
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          cp arch/arm64/boot/Image.gz artifacts/Image.gz
+          cp arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dtb artifacts/sm8750-oneplus-dodge.dtb
+          cp .config artifacts/config-sm8750-oneplus13
+          sha256sum artifacts/* | tee artifacts/SHA256SUMS
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oneplus13-sm8750-kernel
+          path: artifacts/
