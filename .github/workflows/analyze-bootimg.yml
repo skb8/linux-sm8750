@@ -1,0 +1,77 @@
+name: Analyze OnePlus 13 boot.img
+
+on:
+  push:
+    branches:
+      - oneplus-13-sm8750-bringup-v2
+    paths-ignore:
+      - 'reports/bootimg-analysis.md'
+      - 'reports/bootimg-files/**'
+  workflow_dispatch:
+    inputs:
+      drive_file_id:
+        description: 'Google Drive file ID for boot.img'
+        required: false
+        default: '1Z9r9BVi2ofrjX4a3JMY4fvVlt6UCMw9H'
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    name: Download and unpack boot.img
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            binutils \
+            cpio \
+            file \
+            gzip \
+            lz4 \
+            xz-utils \
+            zstd \
+            python3 \
+            python3-pip
+          python3 -m pip install --break-system-packages gdown
+
+      - name: Download boot.img from Drive
+        env:
+          DRIVE_FILE_ID: ${{ github.event.inputs.drive_file_id || '1Z9r9BVi2ofrjX4a3JMY4fvVlt6UCMw9H' }}
+        run: |
+          mkdir -p reports/bootimg-files
+          gdown --fuzzy "https://drive.google.com/file/d/${DRIVE_FILE_ID}/view" -O reports/bootimg-files/boot.img
+          file reports/bootimg-files/boot.img
+          sha256sum reports/bootimg-files/boot.img | tee reports/bootimg-files/boot.img.sha256
+
+      - name: Analyze boot image
+        run: |
+          python3 tools/analyze-android-boot.py \
+            --boot reports/bootimg-files/boot.img \
+            --out reports/bootimg-files \
+            --report reports/bootimg-analysis.md
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oneplus13-bootimg-analysis
+          path: |
+            reports/bootimg-analysis.md
+            reports/bootimg-files/**
+
+      - name: Commit analysis report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/bootimg-analysis.md reports/bootimg-files/boot.img.sha256
+          git commit -m "reports: update boot.img analysis" || exit 0
+          git push
